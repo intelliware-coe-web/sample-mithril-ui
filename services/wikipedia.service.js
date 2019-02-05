@@ -2,7 +2,7 @@ const WikipediaService = (function () {
   return { search };
 
   function search(topic) {
-    return fetch(`http://en.wikipedia.org/w/api.php?action=opensearch&search=${topic}&origin=*`)
+    return fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${topic}&origin=*`)
       .then(response => response.json())
       .then(adaptResult);
   }
