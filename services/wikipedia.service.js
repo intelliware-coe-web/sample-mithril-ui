@@ -15,11 +15,18 @@ const WikipediaService = (function () {
   }
 
   function adaptSearchResults(searchResult) {
-    const summary = `${searchResult.continue.sroffset || searchResult.query.searchinfo.totalhits} of ${searchResult.query.searchinfo.totalhits}`;
+    const summary = getSummary(searchResult);
     const articles = searchResult.query.search
       .map(({pageid}) => searchResult.query.pages[pageid])
       .map(({title, extract, fullurl, thumbnail = {}}) => ({title, thumbnail, description: extract, href: fullurl}));
     return { summary, articles };
+  }
+
+  function getSummary(searchResult) {
+    const page = searchResult.continue ? searchResult.continue.sroffset :
+      searchResult.query.searchinfo.totalhits;
+    const total = searchResult.query.searchinfo.totalhits;
+    return `${page} of ${total}`
   }
 
   function getSearchParams(topic) {
