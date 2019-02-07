@@ -1,33 +1,36 @@
 const WikipediaSearch = (articleService) => {
-  const state = {
+  let store = {
     busy: false,
     articles: []
   };
 
+  const debouncedSearch = _.debounce(500)(async function(search) {
+    const results = await articleService.search(search);
+    store = { ...store, ...results, busy: false };
+    m.redraw();
+  });
+
   return {
-    oninit: () => {
-      const debouncedSearch = _.debounce(1000)(onSearch);
-      this.onsearch = query => {
-        state.busy = true;
-        debouncedSearch(query);
-      };
-    },
-    view: () => m('div', [
-      m(SearchComponent, {onsearch: this.onsearch}),
-      state.busy ? m(Spinner) : m('div'),
-      m(ArticleList, {articles: state.articles})
+    view: () =>
+      m('div', {class: 'uk-padding'}, [
+        m(SearchComponent, { onsearch }),
+        store.busy ? m(Spinner, store) : undefined,
+        store.articles.length ? m(ArticleList, store) : undefined,
+        store.articles.length ? m(LoadMore, {
+          ...store,
+          onclick: onsearch.bind(null, store.search)
+        }) : undefined
     ])
   };
 
-  function onSearch(search) {
-    return articleService.search(search)
-      .then(setArticles)
-      // hack because we're using fetch instead of m.request
-      .finally(m.redraw);
+  function onsearch(search) {
+    startSearch(search);
+    debouncedSearch(search);
   }
 
-  function setArticles(articles) {
-    state.busy = false;
-    state.articles = articles;
+  function startSearch(search) {
+    store.busy = true;
+    store.articles = [];
+    store.search = search;
   }
 };
