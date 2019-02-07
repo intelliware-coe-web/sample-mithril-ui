@@ -1,36 +1,43 @@
 const WikipediaSearch = (articleService) => {
   let store = {
     busy: false,
-    articles: []
+    articles: [],
+    error: {},
+    search: ''
   };
 
-  const debouncedSearch = _.debounce(500)(async function(search) {
-    const results = await articleService.search(search);
-    store = { ...store, ...results, busy: false };
-    m.redraw();
+  const debouncedSearch = _.debounce(500)(function (search) {
+    articleService.search(search)
+      .then(results => store = {...store, ...results, busy: false})
+      .finally(m.redraw)
+      .catch(() => store = {...initializeStore(store.search), error: { title: 'Error', message: 'Please try again'}});
   });
 
   return {
     view: () =>
       m('div', {class: 'uk-padding'}, [
-        m(SearchComponent, { onsearch }),
-        store.busy ? m(Spinner, store) : undefined,
-        store.articles.length ? m(ArticleList, store) : undefined,
-        store.articles.length ? m(LoadMore, {
+        m(SearchComponent, {onsearch}),
+        m(ErrorMessage, store.error),
+        m(Spinner, store),
+        m(ArticleList, store),
+        m(LoadMore, {
           ...store,
-          onclick: onsearch.bind(null, store.search)
-        }) : undefined
-    ])
+          onclick: () => onsearch(store.search)
+        })
+      ])
   };
 
   function onsearch(search) {
-    startSearch(search);
+    store = initializeStore(search);
     debouncedSearch(search);
   }
 
-  function startSearch(search) {
-    store.busy = true;
-    store.articles = [];
-    store.search = search;
+  function initializeStore(search) {
+    return {
+      busy: true,
+      error: {},
+      articles: [],
+      search: search,
+    }
   }
 };

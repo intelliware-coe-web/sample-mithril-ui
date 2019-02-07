@@ -1,5 +1,7 @@
 const Spinner = {
-  view: () =>
-    m('div', {class: 'uk-text-center'},
-      m('span', {'uk-spinner': 'ratio: 4.5'}))
+  view: ({attrs}) =>
+    attrs.busy ?
+      m('div', {class: 'uk-text-center'},
+        m('span', {'uk-spinner': 'ratio: 4.5'})) :
+      undefined
 };
