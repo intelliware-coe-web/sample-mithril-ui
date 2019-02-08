@@ -12,12 +12,34 @@ const WikipediaService = (function () {
   }
 
   function* find() {
-    let topic = '';
+    const current = { topic: '' };
+    const previous = { topic: '' };
     while(true) {
-      topic = yield fetch(`https://en.wikipedia.org/w/api.php?${getSearchParams(topic).toString()}`)
-        .then(toJson)
-        .then(adaptSearchResults);
+      current.topic = yield current.request;
+
+      if (current.topic) {
+        if (current.topic !== previous.topic) {
+          delete previous.offset;
+        }
+
+        const searchParams = getSearchParams(current.topic, previous.offset).toString();
+        current.request = fetch(`https://en.wikipedia.org/w/api.php?${searchParams}`)
+            .then(toJson)
+            .then(_.curry(sideEffect)(setOffset))
+            .then(adaptSearchResults);
+
+        previous.topic = current.topic;
+      }
     }
+
+    function setOffset(response) {
+      previous.offset = response.continue;
+    }
+  }
+
+  function sideEffect(effect, value) {
+    effect(value);
+    return value;
   }
 
   function toJson(response) {
@@ -33,13 +55,12 @@ const WikipediaService = (function () {
   }
 
   function getSummary(searchResult) {
-    const page = searchResult.continue ? searchResult.continue.sroffset :
-      searchResult.query.searchinfo.totalhits;
+    const page = searchResult.continue ? searchResult.continue.sroffset : searchResult.query.searchinfo.totalhits;
     const total = searchResult.query.searchinfo.totalhits;
     return `${page} of ${total}`
   }
 
-  function getSearchParams(topic) {
+  function getSearchParams(topic, offset) {
     const searchParams = new URLSearchParams();
     searchParams.append('action', 'query');
     searchParams.append('generator', 'search');
@@ -56,6 +77,10 @@ const WikipediaService = (function () {
     searchParams.append('redirects', '1');
     searchParams.append('format', 'json');
     searchParams.append('origin', '*');
+    if (offset) {
+      searchParams.append('sroffset', offset.sroffset);
+      searchParams.append('gsroffset', offset.gsroffset);
+    }
     return searchParams;
   }
 }());
