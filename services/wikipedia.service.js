@@ -7,15 +7,16 @@ const WikipediaService = (function () {
   };
 
   // Modify the implementation of this function to utilize generators to provide the next set of results
-  function search(finder, topic) {
-    return finder.next(topic).value;
+  async function search(finder, topic) {
+    const next = await finder.next(topic);
+    return next.value;
   }
 
-  function* find() {
+  async function* find() {
     const current = { topic: '' };
     const previous = { topic: '' };
     while(true) {
-      current.topic = yield current.request;
+      current.topic = yield current.results;
 
       if (current.topic) {
         if (current.topic !== previous.topic) {
@@ -23,27 +24,14 @@ const WikipediaService = (function () {
         }
 
         const searchParams = getSearchParams(current.topic, previous.offset).toString();
-        current.request = fetch(`https://en.wikipedia.org/w/api.php?${searchParams}`)
-            .then(toJson)
-            .then(_.curry(sideEffect)(setOffset))
-            .then(adaptSearchResults);
+        const response = await fetch(`https://en.wikipedia.org/w/api.php?${searchParams}`);
+        const results = await response.json();
+        current.results = adaptSearchResults(results);
 
+        previous.offset = results.continue;
         previous.topic = current.topic;
       }
     }
-
-    function setOffset(response) {
-      previous.offset = response.continue;
-    }
-  }
-
-  function sideEffect(effect, value) {
-    effect(value);
-    return value;
-  }
-
-  function toJson(response) {
-    return response.json();
   }
 
   function adaptSearchResults(searchResult) {
