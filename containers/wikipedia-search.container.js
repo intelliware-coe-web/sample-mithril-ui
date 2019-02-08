@@ -1,43 +1,44 @@
 const WikipediaSearch = (articleService) => {
-  let store = {
+  const store = {
     busy: false,
     articles: [],
+    summary: '',
     error: {},
     search: ''
   };
 
-  const debouncedSearch = _.debounce(500)(function (search) {
-    articleService.search(search)
-      .then(results => store = {...store, ...results, busy: false})
-      .finally(m.redraw)
-      .catch(() => store = {...initializeStore(store.search), error: { title: 'Error', message: 'Please try again'}});
-  });
+  const searchHandler = _.flow(startSearch, _.debounce(500)(doSearch));
 
   return {
     view: () =>
       m('div', {class: 'uk-padding'}, [
-        m(SearchComponent, {onsearch}),
+        m(SearchComponent, {onsearch: searchHandler}),
         m(ErrorMessage, store.error),
         m(Spinner, store),
         m(ArticleList, store),
-        m(LoadMore, {
-          ...store,
-          onclick: () => onsearch(store.search)
-        })
+        m(LoadMore, {...store, onclick: () => searchHandler(store.search)})
       ])
   };
 
-  function onsearch(search) {
-    store = initializeStore(search);
-    debouncedSearch(search);
+  function startSearch(search) {
+    store.articles = search === store.search ? store.articles : [];
+    store.search = search;
+    store.busy = true;
+    store.error = {};
+    store.summary = '';
+    return search;
   }
 
-  function initializeStore(search) {
-    return {
-      busy: true,
-      error: {},
-      articles: [],
-      search: search,
-    }
+  function doSearch(search) {
+    return articleService.search(search)
+      .then(({articles, summary}) => {
+        store.articles = store.articles.concat(articles);
+        store.summary = summary;
+      })
+      .catch(() => store.error = {title: 'Error', message: 'Please try again'})
+      .finally(() => {
+        store.busy = false;
+        m.redraw();
+      });
   }
 };
