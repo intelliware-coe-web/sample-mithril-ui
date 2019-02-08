@@ -5,7 +5,11 @@ const WikipediaService = (function () {
 
   // Modify the implementation of this function to utilize generators to provide the next set of results
   function search(topic) {
-    return fetch(`https://en.wikipedia.org/w/api.php?${getSearchParams(topic).toString()}`)
+    return find(topic).next().value;
+  }
+
+  function* find(topic) {
+    yield fetch(`https://en.wikipedia.org/w/api.php?${getSearchParams(topic).toString()}`)
       .then(toJson)
       .then(adaptSearchResults);
   }
