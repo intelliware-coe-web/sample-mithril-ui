@@ -1,17 +1,23 @@
 const WikipediaService = (function () {
+  const fullTextSearch = find();
+  fullTextSearch.next();
+
   return {
-    search
+    search: _.curry(search)(fullTextSearch)
   };
 
   // Modify the implementation of this function to utilize generators to provide the next set of results
-  function search(topic) {
-    return find(topic).next().value;
+  function search(finder, topic) {
+    return finder.next(topic).value;
   }
 
-  function* find(topic) {
-    yield fetch(`https://en.wikipedia.org/w/api.php?${getSearchParams(topic).toString()}`)
-      .then(toJson)
-      .then(adaptSearchResults);
+  function* find() {
+    let topic = '';
+    while(true) {
+      topic = yield fetch(`https://en.wikipedia.org/w/api.php?${getSearchParams(topic).toString()}`)
+        .then(toJson)
+        .then(adaptSearchResults);
+    }
   }
 
   function toJson(response) {
