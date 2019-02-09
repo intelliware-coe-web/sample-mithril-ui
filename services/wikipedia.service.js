@@ -13,32 +13,37 @@ const WikipediaService = (function () {
   }
 
   async function* find() {
-    const current = { topic: '' };
-    const previous = { topic: '' };
+    let current = { topic: '' };
+    let previous = { topic: '' , results: {}};
     while(true) {
       current.topic = yield current.results;
 
       if (current.topic) {
         if (current.topic !== previous.topic) {
           delete previous.offset;
+          previous.results.articles = [];
         }
 
-        const searchParams = getSearchParams(current.topic, previous.offset).toString();
-        const response = await fetch(`https://en.wikipedia.org/w/api.php?${searchParams}`);
-        const results = await response.json();
-        current.results = adaptSearchResults(results);
+        current.results = await queryWikipedia(current.topic, previous.results.continue);
+        current.results.articles = previous.results.articles.concat(current.results.articles);
 
-        previous.offset = results.continue;
-        previous.topic = current.topic;
+        previous = { ...current };
       }
     }
+  }
+
+  async function queryWikipedia(topic, offset) {
+    const searchParams = getSearchParams(topic, offset).toString();
+    const response = await fetch(`https://en.wikipedia.org/w/api.php?${searchParams}`);
+    const results = await response.json();
+    return adaptSearchResults(results);
   }
 
   function adaptSearchResults(searchResult) {
     const summary = getSummary(searchResult);
     const articles = Object.values(searchResult.query.pages)
       .map(({title, extract, fullurl, thumbnail = {}}) => ({title, thumbnail, description: extract, href: fullurl}));
-    return { summary, articles };
+    return { summary, articles, continue: searchResult.continue};
   }
 
   function getSummary(searchResult) {

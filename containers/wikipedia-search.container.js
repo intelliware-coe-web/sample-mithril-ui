@@ -21,7 +21,9 @@ const WikipediaSearch = (articleService) => {
   };
 
   function startSearch(search) {
-    store.articles = search === store.search ? store.articles : [];
+    if (search !== store.search) {
+      store.articles = [];
+    }
     store.search = search;
     store.busy = true;
     store.error = {};
@@ -32,7 +34,7 @@ const WikipediaSearch = (articleService) => {
   function doSearch(search) {
     return articleService.search(search)
       .then(({articles, summary}) => {
-        store.articles = store.articles.concat(articles);
+        store.articles = articles;
         store.summary = summary;
       })
       .catch(() => store.error = {title: 'Error', message: 'Please try again'})
