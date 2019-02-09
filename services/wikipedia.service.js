@@ -16,8 +16,7 @@ const WikipediaService = (function () {
 
   function adaptSearchResults(searchResult) {
     const summary = getSummary(searchResult);
-    const articles = searchResult.query.search
-      .map(({pageid}) => searchResult.query.pages[pageid])
+    const articles = Object.values(searchResult.query.pages)
       .map(({title, extract, fullurl, thumbnail = {}}) => ({title, thumbnail, description: extract, href: fullurl}));
     return { summary, articles };
   }
